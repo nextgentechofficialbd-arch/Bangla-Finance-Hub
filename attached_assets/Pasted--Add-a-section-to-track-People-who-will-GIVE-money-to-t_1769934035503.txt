@@ -1,0 +1,67 @@
+• Add a section to track:
+  - People who will GIVE money to the user (Debtors)
+  - People the user OWES money to (Creditors)
+• Each record must store:
+  - Name
+  - Phone number
+  - Amount
+  - Status (paid / unpaid / partial)
+• Must work completely offline.
+• Must not interfere with existing expense logic.
+
+--------------------------------
+
+E. REPORTS, EXPORT & SHARE
+--------------------------------
+• Generate monthly financial reports.
+• Allow exporting reports as PDF (offline).
+• Allow sharing reports using system share (if supported).
+• No external APIs or servers allowed.
+
+--------------------------------
+
+F. NOTIFICATIONS
+--------------------------------
+• Implement local notifications:
+  - Automatically trigger at the end of each month
+  - Notification must include:
+    total income, total expense, savings
+• Must work offline.
+• Must be compatible with Android WebView.
+
+--------------------------------
+
+G. SETTINGS (PROFESSIONAL APP LEVEL)
+--------------------------------
+• Settings section must include:
+  - Language toggle (Bangla / English)
+  - Data backup (export data to local file)
+  - Data restore (import backup file)
+  - Reset all data (with confirmation)
+  - App info / version
+  - Privacy notice (offline-only, no data leaves device)
+
+====================================
+TECHNICAL CONSTRAINTS
+====================================
+• No backend.
+• No login.
+• No cloud dependency.
+• Relative paths only (Vercel safe).
+• Clean console (no errors, no warnings).
+• Performance optimized for low-end devices.
+• Maintain existing design 100%.
+
+====================================
+FINAL VERIFICATION CHECKLIST
+====================================
+✔ All "Coming Soon" features fully working
+✔ Payment methods fully customizable
+✔ Offline mode works
+✔ Online mode works
+✔ Vercel deployment safe
+✔ Android APK / WebView compatible
+✔ No UI or design changes
+✔ No console errors
+
+Complete all fixes and implementations directly inside the provided project files.

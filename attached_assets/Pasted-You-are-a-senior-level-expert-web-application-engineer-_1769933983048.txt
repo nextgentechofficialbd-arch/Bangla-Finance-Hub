@@ -1,0 +1,155 @@
+You are a senior-level expert web application engineer.
+
+You are working on an already built personal finance / expense tracking web app.
+All existing project files are already provided to you.
+
+====================================
+ABSOLUTE RULES (VERY IMPORTANT)
+====================================
+1. DO NOT change any existing UI design, layout, colors, fonts, spacing, or visual structure.
+2. DO NOT remove or refactor any code that is already working.
+3. DO NOT rename files, folders, routes, or variables unless fixing a critical bug.
+4. DO NOT introduce new frameworks or heavy libraries.
+5. ONLY complete unfinished features and fix features that are currently broken or showing "Coming Soon".
+6. Follow the existing coding style and structure strictly.
+7. The final result must stay within free-tier limits.
+
+====================================
+PLATFORM & DEPLOYMENT REQUIREMENTS
+====================================
+• App must work BOTH OFFLINE and ONLINE.
+• App must be fully compatible with Vercel static hosting.
+• App must be deployable from GitHub to Vercel without extra configuration.
+• App must work correctly inside Android WebView
+  (Android Studio → build APK/App).
+• No backend server.
+• No authentication system.
+• No cloud sync.
+• No analytics or tracking.
+• Use only browser-supported storage:
+  - IndexedDB (preferred)
+  - localStorage (if already used).
+
+====================================
+FEATURES THAT MUST BE COMPLETED
+====================================
+
+A. FIX ALL "COMING SOON" FEATURES
+--------------------------------
+• Identify every feature, section, button, or page that shows:
+  - "Coming Soon"
+  - Placeholder text
+  - Disabled or non-working behavior
+• Fully implement those features so they work end-to-end.
+• After completion, there must be:
+  - No "Coming Soon" text
+  - No dead buttons
+  - No fake UI
+
+--------------------------------
+
+B. CUSTOMIZABLE PAYMENT METHODS
+--------------------------------
+• Implement a fully dynamic payment method system.
+• Default examples may include:
+  - bKash
+  - Nagad
+  - Binance
+  - Cash
+  - Bank
+• User must be able to:
+  - Add new payment methods
+  - Edit existing payment methods
+  - Remove payment methods
+• Payment methods must be selectable while adding expenses.
+• Removing a payment method must NOT break old records.
+
+--------------------------------
+
+C. MONTHLY FINANCE MANAGEMENT
+--------------------------------
+• App must support:
+  - Monthly income / salary
+  - Starting cash or balance
+• Data must be separated month-wise:
+  - Current (running) month → editable
+  - Previous months → view-only
+• Month selector / calendar must:
+  - Switch between months
+  - Load correct data for that month
+• Each month must show:
+  - Total income
+  - Total expense
+  - Savings
+
+--------------------------------
+
+D. DUE / LENDING SYSTEM
+--------------------------------
+• Add a section to track:
+  - People who will GIVE money to the user (Debtors)
+  - People the user OWES money to (Creditors)
+• Each record must store:
+  - Name
+  - Phone number
+  - Amount
+  - Status (paid / unpaid / partial)
+• Must work completely offline.
+• Must not interfere with existing expense logic.
+
+--------------------------------
+
+E. REPORTS, EXPORT & SHARE
+--------------------------------
+• Generate monthly financial reports.
+• Allow exporting reports as PDF (offline).
+• Allow sharing reports using system share (if supported).
+• No external APIs or servers allowed.
+
+--------------------------------
+
+F. NOTIFICATIONS
+--------------------------------
+• Implement local notifications:
+  - Automatically trigger at the end of each month
+  - Notification must include:
+    total income, total expense, savings
+• Must work offline.
+• Must be compatible with Android WebView.
+
+--------------------------------
+
+G. SETTINGS (PROFESSIONAL APP LEVEL)
+--------------------------------
+• Settings section must include:
+  - Language toggle (Bangla / English)
+  - Data backup (export data to local file)
+  - Data restore (import backup file)
+  - Reset all data (with confirmation)
+  - App info / version
+  - Privacy notice (offline-only, no data leaves device)
+
+====================================
+TECHNICAL CONSTRAINTS
+====================================
+• No backend.
+• No login.
+• No cloud dependency.
+• Relative paths only (Vercel safe).
+• Clean console (no errors, no warnings).
+• Performance optimized for low-end devices.
+• Maintain existing design 100%.
+
+====================================
+FINAL VERIFICATION CHECKLIST
+====================================
+✔ All "Coming Soon" features fully working
+✔ Payment methods fully customizable
+✔ Offline mode works
+✔ Online mode works
+✔ Vercel deployment safe
+✔ Android APK / WebView compatible
+✔ No UI or design changes
+✔ No console errors
+
+Complete all fixes and implementations directly inside the provided project files.
