@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { 
   Globe, 
-  Shield, 
   Moon, 
   ChevronRight, 
   Bell, 
   Download, 
-  Cloud, 
+  Upload, 
   Trash2, 
   Info, 
   FileText, 
@@ -15,13 +14,13 @@ import {
   Star, 
   Share2, 
   Lock,
-  Fingerprint,
   Wallet,
   Tag,
-  Clock,
-  Mail,
-  MessageCircle,
-  ExternalLink
+  Plus,
+  Edit2,
+  X,
+  FileDown,
+  CreditCard
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -33,14 +32,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useExportData, useImportData, useClearData, usePaymentMethods, useCreatePaymentMethod, useDeletePaymentMethod, useCategories, useCreateCategory, useDeleteCategory } from "@/hooks/use-finance";
+import { generateMonthlyReportPDF, shareReport } from "@/lib/pdfReport";
+import { getCurrentMonth } from "@/lib/db";
+import { format, subMonths, addMonths } from "date-fns";
+import clsx from "clsx";
 
 export default function Settings() {
   const { t, language, setLanguage } = useI18n();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showPaymentMethodsDialog, setShowPaymentMethodsDialog] = useState(false);
+  const [showCategoriesDialog, setShowCategoriesDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [reportMonth, setReportMonth] = useState(new Date());
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [newCategory, setNewCategory] = useState({ name: "", type: "EXPENSE" as const });
+  
+  const exportData = useExportData();
+  const importData = useImportData();
+  const clearData = useClearData();
+  const { data: paymentMethods } = usePaymentMethods();
+  const createPaymentMethod = useCreatePaymentMethod();
+  const deletePaymentMethod = useDeletePaymentMethod();
+  const { data: categories } = useCategories();
+  const createCategory = useCreateCategory();
+  const deleteCategory = useDeleteCategory();
 
   const toggleLanguage = () => {
     setLanguage(language === 'BN' ? 'EN' : 'BN');
@@ -49,24 +72,42 @@ export default function Settings() {
     });
   };
 
-  const handleExport = () => {
-    toast({
-      title: t('comingSoon'),
-      description: 'PDF export feature will be available soon.',
-    });
+  const handleExportBackup = () => {
+    exportData.mutate();
   };
 
-  const handleBackup = () => {
-    toast({
-      title: t('comingSoon'),
-      description: 'Cloud backup feature will be available soon.',
-    });
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      importData.mutate(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleExportPDF = async () => {
+    const month = format(reportMonth, 'yyyy-MM');
+    try {
+      await generateMonthlyReportPDF(month, language);
+      toast({ title: language === 'BN' ? 'PDF ডাউনলোড হয়েছে' : 'PDF downloaded' });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to generate PDF', variant: 'destructive' });
+    }
+    setShowReportDialog(false);
+  };
+
+  const handleShareReport = async () => {
+    const month = format(reportMonth, 'yyyy-MM');
+    await shareReport(month, language);
+    setShowReportDialog(false);
   };
 
   const handleClearData = () => {
-    localStorage.clear();
-    setShowClearDialog(false);
-    window.location.reload();
+    clearData.mutate(undefined, {
+      onSuccess: () => {
+        setShowClearDialog(false);
+        window.location.reload();
+      }
+    });
   };
 
   const handleShare = async () => {
@@ -85,17 +126,33 @@ export default function Settings() {
     } else {
       navigator.clipboard.writeText(window.location.origin);
       toast({
-        title: 'Link copied!',
-        description: 'Share link copied to clipboard.',
+        title: language === 'BN' ? 'লিংক কপি হয়েছে' : 'Link copied!',
       });
     }
   };
 
-  const handleRate = () => {
-    toast({
-      title: t('comingSoon'),
-      description: 'App store rating will be available soon.',
-    });
+  const handleAddPaymentMethod = () => {
+    if (newPaymentMethod.trim()) {
+      createPaymentMethod.mutate({
+        name: newPaymentMethod.trim(),
+        icon: 'CreditCard',
+        isDefault: false,
+      });
+      setNewPaymentMethod("");
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (newCategory.name.trim()) {
+      createCategory.mutate({
+        name: newCategory.name.trim(),
+        icon: 'Tag',
+        color: '#6366F1',
+        type: newCategory.type,
+        isPrivate: false,
+      });
+      setNewCategory({ name: "", type: "EXPENSE" });
+    }
   };
 
   const SettingsItem = ({ 
@@ -146,7 +203,14 @@ export default function Settings() {
       <h1 className="text-2xl font-bold mb-2">{t('settings')}</h1>
       <p className="text-muted-foreground text-sm mb-6">{t('appTagline')}</p>
 
-      {/* General Settings */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImportBackup} 
+        accept=".json" 
+        className="hidden" 
+      />
+
       <SectionHeader title={t('general')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
@@ -169,14 +233,6 @@ export default function Settings() {
           testId="settings-language"
         />
         <SettingsItem
-          icon={Wallet}
-          iconBg="bg-green-500/20"
-          iconColor="text-green-400"
-          title={t('currency')}
-          subtitle={t('currencyBDT')}
-          testId="settings-currency"
-        />
-        <SettingsItem
           icon={Moon}
           iconBg="bg-orange-500/20"
           iconColor="text-orange-400"
@@ -188,7 +244,6 @@ export default function Settings() {
         />
       </div>
 
-      {/* Security */}
       <SectionHeader title={t('security')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
@@ -207,19 +262,8 @@ export default function Settings() {
           showArrow={false}
           testId="settings-pin-lock"
         />
-        <SettingsItem
-          icon={Fingerprint}
-          iconBg="bg-cyan-500/20"
-          iconColor="text-cyan-400"
-          title={t('biometric')}
-          subtitle={t('biometricDesc')}
-          rightElement={<span className="text-xs text-muted-foreground">{t('comingSoon')}</span>}
-          showArrow={false}
-          testId="settings-biometric"
-        />
       </div>
 
-      {/* Notifications & Reminders */}
       <SectionHeader title={t('notifications')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
@@ -238,57 +282,58 @@ export default function Settings() {
           showArrow={false}
           testId="settings-notifications"
         />
-        <SettingsItem
-          icon={Clock}
-          iconBg="bg-indigo-500/20"
-          iconColor="text-indigo-400"
-          title={t('reminder')}
-          subtitle={t('reminderDesc')}
-          testId="settings-reminder"
-        />
       </div>
 
-      {/* Budget & Categories */}
       <SectionHeader title={t('categories')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
-          icon={Wallet}
+          icon={CreditCard}
           iconBg="bg-emerald-500/20"
           iconColor="text-emerald-400"
-          title={t('monthlyBudget')}
-          subtitle={t('monthlyBudgetDesc')}
-          testId="settings-budget"
+          title={t('paymentMethod')}
+          subtitle={`${paymentMethods?.length || 0} ${language === 'BN' ? 'টি মেথড' : 'methods'}`}
+          onClick={() => setShowPaymentMethodsDialog(true)}
+          testId="settings-payment-methods"
         />
         <SettingsItem
           icon={Tag}
           iconBg="bg-pink-500/20"
           iconColor="text-pink-400"
           title={t('categories')}
-          subtitle={t('categoriesDesc')}
+          subtitle={`${categories?.length || 0} ${language === 'BN' ? 'টি ক্যাটাগরি' : 'categories'}`}
+          onClick={() => setShowCategoriesDialog(true)}
           testId="settings-categories"
         />
       </div>
 
-      {/* Data & Backup */}
       <SectionHeader title={t('dataBackup')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
-          icon={Download}
+          icon={FileDown}
           iconBg="bg-teal-500/20"
           iconColor="text-teal-400"
-          title={t('exportData')}
-          subtitle={t('exportDataDesc')}
-          onClick={handleExport}
+          title={language === 'BN' ? 'PDF রিপোর্ট' : 'PDF Report'}
+          subtitle={language === 'BN' ? 'মাসিক রিপোর্ট ডাউনলোড করুন' : 'Download monthly report'}
+          onClick={() => setShowReportDialog(true)}
+          testId="settings-export-pdf"
+        />
+        <SettingsItem
+          icon={Download}
+          iconBg="bg-sky-500/20"
+          iconColor="text-sky-400"
+          title={language === 'BN' ? 'ব্যাকআপ ডাউনলোড' : 'Download Backup'}
+          subtitle={language === 'BN' ? 'JSON ফাইল হিসাবে সংরক্ষণ করুন' : 'Save as JSON file'}
+          onClick={handleExportBackup}
           testId="settings-export"
         />
         <SettingsItem
-          icon={Cloud}
-          iconBg="bg-sky-500/20"
-          iconColor="text-sky-400"
-          title={t('backupRestore')}
-          subtitle={t('backupRestoreDesc')}
-          onClick={handleBackup}
-          testId="settings-backup"
+          icon={Upload}
+          iconBg="bg-indigo-500/20"
+          iconColor="text-indigo-400"
+          title={language === 'BN' ? 'ব্যাকআপ রিস্টোর' : 'Restore Backup'}
+          subtitle={language === 'BN' ? 'JSON ফাইল থেকে পুনরুদ্ধার করুন' : 'Restore from JSON file'}
+          onClick={() => fileInputRef.current?.click()}
+          testId="settings-import"
         />
         <SettingsItem
           icon={Trash2}
@@ -301,33 +346,6 @@ export default function Settings() {
         />
       </div>
 
-      {/* Help & Support */}
-      <SectionHeader title={t('helpSupport')} />
-      <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
-        <SettingsItem
-          icon={HelpCircle}
-          iconBg="bg-violet-500/20"
-          iconColor="text-violet-400"
-          title={t('faq')}
-          testId="settings-faq"
-        />
-        <SettingsItem
-          icon={Mail}
-          iconBg="bg-rose-500/20"
-          iconColor="text-rose-400"
-          title={t('contactUs')}
-          testId="settings-contact"
-        />
-        <SettingsItem
-          icon={MessageCircle}
-          iconBg="bg-amber-500/20"
-          iconColor="text-amber-400"
-          title={t('helpSupport')}
-          testId="settings-help"
-        />
-      </div>
-
-      {/* About & Legal */}
       <SectionHeader title={t('about')} />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
@@ -336,6 +354,7 @@ export default function Settings() {
           iconColor="text-gray-400"
           title={t('aboutApp')}
           subtitle={`${t('version')} 1.0.0`}
+          showArrow={false}
           testId="settings-about"
         />
         <SettingsItem
@@ -343,22 +362,12 @@ export default function Settings() {
           iconBg="bg-slate-500/20"
           iconColor="text-slate-400"
           title={t('privacyPolicy')}
-          rightElement={<ExternalLink size={16} className="text-muted-foreground" />}
+          subtitle={language === 'BN' ? 'আপনার ডাটা শুধুমাত্র আপনার ডিভাইসে থাকে' : 'Your data stays only on your device'}
           showArrow={false}
           testId="settings-privacy"
         />
-        <SettingsItem
-          icon={FileText}
-          iconBg="bg-zinc-500/20"
-          iconColor="text-zinc-400"
-          title={t('termsOfService')}
-          rightElement={<ExternalLink size={16} className="text-muted-foreground" />}
-          showArrow={false}
-          testId="settings-terms"
-        />
       </div>
 
-      {/* Share & Rate */}
       <SectionHeader title="" />
       <div className="bg-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
         <SettingsItem
@@ -366,7 +375,7 @@ export default function Settings() {
           iconBg="bg-yellow-500/20"
           iconColor="text-yellow-400"
           title={t('rateApp')}
-          onClick={handleRate}
+          onClick={() => toast({ title: language === 'BN' ? 'ধন্যবাদ!' : 'Thank you!' })}
           testId="settings-rate"
         />
         <SettingsItem
@@ -380,7 +389,6 @@ export default function Settings() {
         />
       </div>
 
-      {/* Footer */}
       <div className="text-center pt-8 pb-4">
         <p className="text-lg font-semibold text-emerald-400">{t('appName')}</p>
         <p className="text-xs text-muted-foreground mt-1">{t('version')} 1.0.0</p>
@@ -388,29 +396,140 @@ export default function Settings() {
         <p className="text-xs text-muted-foreground mt-1">&copy; 2024 {t('allRightsReserved')}</p>
       </div>
 
-      {/* Clear Data Confirmation Dialog */}
       <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle className="text-red-400">{t('clearData')}</DialogTitle>
-            <DialogDescription>
-              {t('clearDataWarning')}
-            </DialogDescription>
+            <DialogDescription>{t('clearDataWarning')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowClearDialog(false)}
-              data-testid="button-cancel-clear"
-            >
+            <Button variant="outline" onClick={() => setShowClearDialog(false)} data-testid="button-cancel-clear">
               {t('cancel')}
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleClearData}
-              data-testid="button-confirm-clear"
-            >
+            <Button variant="destructive" onClick={handleClearData} data-testid="button-confirm-clear">
               {t('confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentMethodsDialog} onOpenChange={setShowPaymentMethodsDialog}>
+        <DialogContent className="bg-card border-white/10 max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('paymentMethod')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {paymentMethods?.map(pm => (
+              <div key={pm.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                <span>{pm.name}</span>
+                {!pm.isDefault && (
+                  <button 
+                    onClick={() => deletePaymentMethod.mutate(pm.id)}
+                    className="text-red-400 hover:text-red-300"
+                    data-testid={`delete-pm-${pm.id}`}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Input 
+              value={newPaymentMethod}
+              onChange={(e) => setNewPaymentMethod(e.target.value)}
+              placeholder={language === 'BN' ? 'নতুন মেথড' : 'New method'}
+              className="bg-black/20 border-white/10"
+              data-testid="input-new-payment-method"
+            />
+            <Button onClick={handleAddPaymentMethod} size="icon" data-testid="button-add-payment-method">
+              <Plus size={18} />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCategoriesDialog} onOpenChange={setShowCategoriesDialog}>
+        <DialogContent className="bg-card border-white/10 max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('categories')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {categories?.map(cat => (
+              <div key={cat.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                <div>
+                  <span>{cat.name}</span>
+                  <span className={clsx(
+                    "ml-2 text-xs px-2 py-0.5 rounded",
+                    cat.type === 'INCOME' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                  )}>
+                    {cat.type === 'INCOME' ? t('income') : t('expense')}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => deleteCategory.mutate(cat.id)}
+                  className="text-red-400 hover:text-red-300"
+                  data-testid={`delete-cat-${cat.id}`}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Input 
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              placeholder={language === 'BN' ? 'নতুন ক্যাটাগরি' : 'New category'}
+              className="bg-black/20 border-white/10 flex-1"
+              data-testid="input-new-category"
+            />
+            <select 
+              value={newCategory.type}
+              onChange={(e) => setNewCategory({ ...newCategory, type: e.target.value as 'INCOME' | 'EXPENSE' })}
+              className="bg-black/20 border border-white/10 rounded px-2 text-sm"
+              data-testid="select-category-type"
+            >
+              <option value="EXPENSE">{t('expense')}</option>
+              <option value="INCOME">{t('income')}</option>
+            </select>
+            <Button onClick={handleAddCategory} size="icon" data-testid="button-add-category">
+              <Plus size={18} />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>{language === 'BN' ? 'মাসিক রিপোর্ট' : 'Monthly Report'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center gap-4 py-4">
+            <button 
+              onClick={() => setReportMonth(subMonths(reportMonth, 1))}
+              className="p-2 rounded-lg hover:bg-white/10"
+            >
+              <ChevronRight size={20} className="rotate-180" />
+            </button>
+            <span className="text-lg font-medium min-w-[150px] text-center">
+              {format(reportMonth, 'MMMM yyyy')}
+            </span>
+            <button 
+              onClick={() => setReportMonth(addMonths(reportMonth, 1))}
+              className="p-2 rounded-lg hover:bg-white/10"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleShareReport} data-testid="button-share-report">
+              <Share2 size={16} className="mr-2" />
+              {language === 'BN' ? 'শেয়ার' : 'Share'}
+            </Button>
+            <Button onClick={handleExportPDF} className="bg-primary" data-testid="button-download-pdf">
+              <Download size={16} className="mr-2" />
+              {language === 'BN' ? 'PDF ডাউনলোড' : 'Download PDF'}
             </Button>
           </DialogFooter>
         </DialogContent>
